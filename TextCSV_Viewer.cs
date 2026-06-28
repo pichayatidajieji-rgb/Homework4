@@ -28,6 +28,7 @@ The included MalwareBazaar sample CSV has been modified:
 See README.md for full details.
 */
 using System;
+using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
 
@@ -123,5 +124,101 @@ namespace FileProcessing
 				}
 			}
 		}
-	}   // End of frmTextView class
+
+        private void butProcess_Click(object sender, EventArgs e)
+        {
+            string filePath = tbFileName.Text;
+            if (filePath == "" || !File.Exists(filePath))
+            {
+                MessageBox.Show("Please select a data file first!", "Warning");
+                return;
+            }
+
+
+            int startLine = 1;
+            int endLine = int.MaxValue;
+
+            if (textStart.Text != "")
+            {
+                startLine = int.Parse(textStart.Text);
+            }
+            if (textEnd.Text != "")
+            {
+                endLine = int.Parse(textEnd.Text);
+            }
+
+            // if (n > m)
+            if (endLine < startLine)
+            {
+                MessageBox.Show("Error: End Line (n) must not be less than Start Line (m)", "Check the data");
+                return;
+            }
+
+            string filterType = textFilter.Text.Trim();
+            string filterLower = filterType.ToLower();
+
+            rtbShow.Clear();
+            int currentLine = 0;
+            int matchCount = 0;
+            string resultText = "";
+
+            using (StreamReader srReader = new StreamReader(filePath))
+            {
+                string strLine;
+                while ((strLine = srReader.ReadLine()) != null)
+                {
+                    if (strLine.StartsWith("#HEADER"))
+                    {
+                        resultText += "[HEADER] " + strLine + "\r\n";
+                        continue;
+                    }
+                    
+                    if (strLine.StartsWith("#"))
+                    {
+                        continue;
+                    }
+
+                    currentLine++;
+
+                    if (currentLine < startLine) continue;
+                    if (currentLine > endLine) break;
+
+                    if (filterType != "")
+                    {
+                        if (!strLine.ToLower().Contains(filterLower))
+                        {
+                            continue;
+                        }
+                    }
+
+                    resultText += "[" + currentLine + "] " + strLine + "\r\n";
+                    matchCount++;
+
+                }
+            }
+
+            // Read only selected lines
+            rtbShow.Text = resultText;
+            labStatus.Text = "Lines Found: " + matchCount.ToString();
+
+            if (filterLower != "" && matchCount > 0)
+            {
+                int startIndex = 0;
+                while ((startIndex = rtbShow.Text.ToLower().IndexOf(filterLower, startIndex)) != -1)
+                {
+                    rtbShow.Select(startIndex, filterType.Length);
+                    rtbShow.SelectionColor = Color.Red; 
+                    rtbShow.SelectionFont = new Font(rtbShow.Font, FontStyle.Bold);
+                    startIndex += filterType.Length;
+                }
+                rtbShow.SelectionStart = 0;
+            }
+
+            // Show message if nothing is found
+            if (matchCount == 0)
+            {
+                MessageBox.Show("No matching data found", "Search Results");
+            }
+        }
+    }   // End of frmTextView class
 }
